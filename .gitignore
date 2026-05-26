@@ -1,23 +1,11 @@
 # Build artifacts
 target/
 .anchor/
+dist/
 
 # Dependency directories
 node_modules/
-
-# Environment variables / Secrets
-.env
-**-keypair.json
-
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS files
-.DS_Store
-Thumbs.db
+jspm_packages/
 
 # Logs
 npm-debug.log*
@@ -25,3 +13,32 @@ yarn-debug.log*
 yarn-error.log*
 validator.log
 test-ledger/
+
+# Environment variables / Secrets
+.env
+.env.local
+.env.*.local
+**-keypair.json
+id.json
+
+# IDEs / Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+.project
+.settings/
+.classpath
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/
+.nyc_output
+
+# Temporary files
+*.bak
+*.tmp
+*.temp

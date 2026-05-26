@@ -1,65 +1,55 @@
-# Solana Constant Product AMM
+# Assignment 1: Constant Product AMM (Solana/Anchor)
 
-A production-ready Automated Market Maker (AMM) built using the Anchor framework on Solana. This program implements a classic Uniswap-style `x * y = k` constant product formula with liquidity provider (LP) tokens, swap fees, and advanced safety features.
+**Course:** Week 4 - Automated Market Makers
+**Status:** Completed
+**Submission Date:** May 26, 2026
 
-## 🚀 Features
+## 📝 Assignment Tasks
 
-- **Constant Product Logic:** Core `x * y = k` formula for automated pricing.
-- **Deterministic PDAs:** Pool addresses are derived from sorted mint addresses to prevent duplicate pools for the same pair.
-- **Slippage Protection:** Built-in guards for swaps and liquidity operations.
-- **Ratio Enforcement:** Prevents "donations" by ensuring deposits match current pool ratios.
-- **LP Token System:** Geometric mean calculation for initial liquidity to prevent price manipulation.
-- **Boxed Accounts:** Optimized stack usage to support complex instructions within SBF limits.
+1.  **Write the AMM program from scratch:** 
+    *   Implemented a full Constant Product AMM using the Anchor framework.
+    *   Features include deterministic PDA derivation, `u128` math precision, and liquidity provider token management.
+2.  **Write tests covering all instructions:**
+    *   Full TypeScript test suite implemented in `tests/amm_tests.ts`.
+    *   Instructions covered: `initialize`, `deposit`, `swap`, and `withdraw`.
+3.  **Well-written README:** (This file).
+4.  **Tests Passing:** Verification output provided below.
 
-## 🛠 Technical Details
+## 🚀 Program Overview
 
-- **Fee Structure:** Configurable fee in basis points (max 10%).
-- **Precision:** Uses `u128` for internal math to prevent overflow and maintain precision.
-- **Account Model:** 
-  - `Pool`: Main state account.
-  - `Vaults`: PDA-owned token accounts for reserves.
-  - `LP Mint`: PDA-controlled mint for liquidity tokens.
+This AMM implementation follows the `x * y = k` formula. It includes advanced safety features like:
+- **Deterministic PDA Seeds:** Mints are sorted to ensure a unique pool address per pair.
+- **Slippage Guards:** Users can specify minimum output amounts.
+- **Deposit Ratio Checks:** Ensures liquidity is added proportionally to prevent value loss.
 
-## 📦 Installation
+## 🛠 Instructions
 
-1. **Clone the repository:**
-   ```bash
-   git clone <your-repo-url>
-   cd amm
-   ```
+- **Initialize:** Setup a new pool with two token mints and a custom fee (bps).
+- **Deposit:** Add liquidity to receive LP tokens.
+- **Swap:** Exchange tokens based on the invariant formula.
+- **Withdraw:** Burn LP tokens to reclaim underlying assets.
 
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+## 🧪 Running Tests
 
-3. **Build the program:**
-   ```bash
-   anchor build
-   ```
-
-## 🧪 Testing
-
-The project includes a comprehensive TypeScript test suite that verifies the full lifecycle of a pool.
+To verify the submission and generate the required screenshot:
 
 ```bash
-anchor test
+# 1. Start a local validator (if not already running)
+solana-test-validator --reset
+
+# 2. Run the tests
+anchor test --skip-local-validator
 ```
 
-*Note: If you encounter port conflicts with the local validator (e.g., Port 8000), ensure no other validator instances are running.*
+### Tests Passing Screenshot
+![Tests Passing](./test-passing.png)
 
-## 📜 Program Instructions
+## 📜 Technical Implementation Details
 
-- `initialize`: Creates a new pool. Mints must be provided in sorted order for deterministic PDA derivation.
-- `deposit`: Add liquidity. Mints LP tokens based on the current reserve ratio.
-- `swap`: Trade token A for B (or vice-versa) with automated fee deduction.
-- `withdraw`: Burn LP tokens to receive a proportional share of pool reserves.
+- **Language:** Rust (Anchor Framework)
+- **Math:** Checked arithmetic with `u128` widening for product calculations.
+- **State Management:** PDAs for Pool, LP Mint, and Token Vaults.
 
-## 🔒 Security
-
-- **Deterministic Seeds:** Prevents pool mirroring.
-- **Arithmetic Safety:** All calculations use checked math or `u128` widening.
-- **Authority Guards:** PDA-owned vaults ensure tokens can only be moved via program logic.
-
-## 📄 License
-MIT
+---
+**Author:** [Your Name/ID]
+**Repository:** [Link to this Repo]

@@ -6,8 +6,6 @@ import {
   createMint, 
   createAccount, 
   mintTo, 
-  getAccount, 
-  getMint 
 } from "@solana/spl-token";
 import { assert } from "chai";
 
@@ -29,15 +27,24 @@ describe("amm", () => {
   let vaultAPda: anchor.web3.PublicKey;
   let vaultBPda: anchor.web3.PublicKey;
 
+  let m0: anchor.web3.PublicKey;
+  let m1: anchor.web3.PublicKey;
+  let userToken0: anchor.web3.PublicKey;
+  let userToken1: anchor.web3.PublicKey;
+
   before(async () => {
     // Create Mints
-    mintA = await createMint(provider.connection, payer, payer.publicKey, null, 6);
-    mintB = await createMint(provider.connection, payer, payer.publicKey, null, 6);
+    mintA = await createMint(provider.connection, payer, payer.publicKey, null, 6, undefined, undefined, TOKEN_PROGRAM_ID);
+    mintB = await createMint(provider.connection, payer, payer.publicKey, null, 6, undefined, undefined, TOKEN_PROGRAM_ID);
 
-    // Sort mints for PDA derivation
-    const [m0, m1] = mintA.toBuffer().compare(mintB.toBuffer()) < 0 
-      ? [mintA, mintB] 
-      : [mintB, mintA];
+    // Sort mints for PDA derivation and program requirement
+    if (mintA.toBuffer().compare(mintB.toBuffer()) < 0) {
+      m0 = mintA;
+      m1 = mintB;
+    } else {
+      m0 = mintB;
+      m1 = mintA;
+    }
 
     // Derivations
     [poolPda] = anchor.web3.PublicKey.findProgramAddressSync(
@@ -60,14 +67,22 @@ describe("amm", () => {
       program.programId
     );
 
-    // User Accounts
-    userTokenA = await createAccount(provider.connection, payer, mintA, payer.publicKey);
-    userTokenB = await createAccount(provider.connection, payer, mintB, payer.publicKey);
-    userLpToken = await createAccount(provider.connection, payer, lpMintPda, payer.publicKey);
+    // User Accounts for Mint A and B
+    userTokenA = await createAccount(provider.connection, payer, mintA, payer.publicKey, undefined, undefined, TOKEN_PROGRAM_ID);
+    userTokenB = await createAccount(provider.connection, payer, mintB, payer.publicKey, undefined, undefined, TOKEN_PROGRAM_ID);
+
+    // Map user tokens to sorted mints
+    if (mintA.toBuffer().compare(mintB.toBuffer()) < 0) {
+      userToken0 = userTokenA;
+      userToken1 = userTokenB;
+    } else {
+      userToken0 = userTokenB;
+      userToken1 = userTokenA;
+    }
 
     // Mint tokens to user
-    await mintTo(provider.connection, payer, mintA, userTokenA, payer, 10_000_000);
-    await mintTo(provider.connection, payer, mintB, userTokenB, payer, 10_000_000);
+    await mintTo(provider.connection, payer, mintA, userTokenA, payer, 10_000_000, [], undefined, TOKEN_PROGRAM_ID);
+    await mintTo(provider.connection, payer, mintB, userTokenB, payer, 10_000_000, [], undefined, TOKEN_PROGRAM_ID);
   });
 
   it("Initializes the pool", async () => {
@@ -76,9 +91,9 @@ describe("amm", () => {
       .initialize(feeBps)
       .accounts({
         payer: payer.publicKey,
-        mintA: mintA,
-        mintB: mintB,
-        // @ts-ignore - anchor-handled PDAs
+        mintA: m0,
+        mintB: m1,
+        // @ts-ignore
         pool: poolPda,
         // @ts-ignore
         lpMint: lpMintPda,
@@ -93,6 +108,9 @@ describe("amm", () => {
     assert.equal(poolState.feeBps, feeBps);
     assert.equal(poolState.reserveA.toNumber(), 0);
     assert.equal(poolState.reserveB.toNumber(), 0);
+
+    // Now that LP mint is initialized, create the user LP token account
+    userLpToken = await createAccount(provider.connection, payer, lpMintPda, payer.publicKey, undefined, undefined, TOKEN_PROGRAM_ID);
   });
 
   it("Deposits liquidity (First Deposit)", async () => {
@@ -108,8 +126,8 @@ describe("amm", () => {
         pool: poolPda,
         // @ts-ignore
         lpMint: lpMintPda,
-        userTokenA: userTokenA,
-        userTokenB: userTokenB,
+        userTokenA: userToken0, // Mapped to m0
+        userTokenB: userToken1, // Mapped to m1
         userLpToken: userLpToken,
         // @ts-ignore
         vaultA: vaultAPda,
@@ -121,12 +139,10 @@ describe("amm", () => {
     const poolState = await program.account.pool.fetch(poolPda);
     assert.equal(poolState.reserveA.toNumber(), 1_000_000);
     assert.equal(poolState.reserveB.toNumber(), 1_000_000);
-    
-    // sqrt(1e6 * 1e6) - 1000 = 999,000
     assert.equal(poolState.lpSupply.toNumber(), 999_000);
   });
 
-  it("Swaps A for B", async () => {
+  it("Swaps token0 for token1", async () => {
     const amountIn = new anchor.BN(100_000);
     const minAmountOut = new anchor.BN(1);
 
@@ -136,8 +152,8 @@ describe("amm", () => {
         user: payer.publicKey,
         // @ts-ignore
         pool: poolPda,
-        userSource: userTokenA,
-        userDestination: userTokenB,
+        userSource: userToken0,
+        userDestination: userToken1,
         // @ts-ignore
         vaultIn: vaultAPda,
         // @ts-ignore
@@ -148,9 +164,7 @@ describe("amm", () => {
     const poolState = await program.account.pool.fetch(poolPda);
     // reserveA = 1,000,000 + 100,000 = 1,100,000
     assert.equal(poolState.reserveA.toNumber(), 1_100_000);
-    // amount_in_after_fee = 100,000 * 0.997 = 99,700
-    // amount_out = 1,000,000 * 99,700 / (1,000_000 + 99,700) = 90,661
-    // reserveB = 1,000,000 - 90,661 = 909,339
+    // reserveB approx 909,339
     assert.approximately(poolState.reserveB.toNumber(), 909339, 1);
   });
 
@@ -168,8 +182,8 @@ describe("amm", () => {
         // @ts-ignore
         lpMint: lpMintPda,
         userLpToken: userLpToken,
-        userTokenA: userTokenA,
-        userTokenB: userTokenB,
+        userTokenA: userToken0,
+        userTokenB: userToken1,
         // @ts-ignore
         vaultA: vaultAPda,
         // @ts-ignore
