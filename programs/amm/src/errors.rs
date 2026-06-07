@@ -34,4 +34,13 @@ pub enum AmmError {
 
     #[msg("Received LP tokens below minimum requested")]
     InsufficientLpTokens,
+
+    #[msg("Missing required burn instruction in the same transaction")]
+    MissingBurnInstruction,
+
+    #[msg("Invalid burn instruction provided")]
+    InvalidBurnInstruction,
+
+    #[msg("Unable to load instruction index")]
+    InvalidInstructionIndex,
 }

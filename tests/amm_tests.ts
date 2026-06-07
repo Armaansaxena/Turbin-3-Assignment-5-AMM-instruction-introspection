@@ -168,31 +168,131 @@ describe("amm", () => {
     assert.approximately(poolState.reserveB.toNumber(), 909339, 1);
   });
 
-  it("Withdraws liquidity", async () => {
+  it("Withdraws liquidity (split instructions with introspection)", async () => {
     const lpAmount = new anchor.BN(100_000);
     const minA = new anchor.BN(1);
     const minB = new anchor.BN(1);
 
-    await program.methods
-      .withdraw(lpAmount, minA, minB)
-      .accounts({
-        user: payer.publicKey,
-        // @ts-ignore
-        pool: poolPda,
-        // @ts-ignore
-        lpMint: lpMintPda,
-        userLpToken: userLpToken,
-        userTokenA: userToken0,
-        userTokenB: userToken1,
-        // @ts-ignore
-        vaultA: vaultAPda,
-        // @ts-ignore
-        vaultB: vaultBPda,
-      })
-      .rpc();
+    const tx = new anchor.web3.Transaction();
+
+    tx.add(
+      await program.methods
+        .burnLp(lpAmount)
+        .accounts({
+          user: payer.publicKey,
+          // @ts-ignore
+          pool: poolPda,
+          // @ts-ignore
+          lpMint: lpMintPda,
+          userLpToken: userLpToken,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .instruction()
+    );
+
+    tx.add(
+      await program.methods
+        .payout(minA, minB)
+        .accounts({
+          user: payer.publicKey,
+          // @ts-ignore
+          pool: poolPda,
+          userTokenA: userToken0,
+          userTokenB: userToken1,
+          // @ts-ignore
+          vaultA: vaultAPda,
+          // @ts-ignore
+          vaultB: vaultBPda,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          instructions: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+        })
+        .instruction()
+    );
+
+    await provider.sendAndConfirm(tx);
 
     const poolState = await program.account.pool.fetch(poolPda);
     // Previous supply: 999,000. Burned: 100,000. New: 899,000
     assert.equal(poolState.lpSupply.toNumber(), 899_000);
+  });
+
+  it("Fails to payout without burn instruction", async () => {
+    const minA = new anchor.BN(1);
+    const minB = new anchor.BN(1);
+
+    try {
+      await program.methods
+        .payout(minA, minB)
+        .accounts({
+          user: payer.publicKey,
+          // @ts-ignore
+          pool: poolPda,
+          userTokenA: userToken0,
+          userTokenB: userToken1,
+          // @ts-ignore
+          vaultA: vaultAPda,
+          // @ts-ignore
+          vaultB: vaultBPda,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          instructions: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+        })
+        .rpc();
+      assert.fail("Should have failed");
+    } catch (e: any) {
+      // Expected: MissingBurnInstruction
+      assert.include(e.message, "MissingBurnInstruction");
+    }
+  });
+
+  it("Fails to payout if burn instruction is in wrong order", async () => {
+    const lpAmount = new anchor.BN(100_000);
+    const minA = new anchor.BN(1);
+    const minB = new anchor.BN(1);
+
+    const tx = new anchor.web3.Transaction();
+
+    // Payout FIRST (will be index 0)
+    tx.add(
+      await program.methods
+        .payout(minA, minB)
+        .accounts({
+          user: payer.publicKey,
+          // @ts-ignore
+          pool: poolPda,
+          userTokenA: userToken0,
+          userTokenB: userToken1,
+          // @ts-ignore
+          vaultA: vaultAPda,
+          // @ts-ignore
+          vaultB: vaultBPda,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          instructions: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+        })
+        .instruction()
+    );
+
+    // Burn SECOND
+    tx.add(
+      await program.methods
+        .burnLp(lpAmount)
+        .accounts({
+          user: payer.publicKey,
+          // @ts-ignore
+          pool: poolPda,
+          // @ts-ignore
+          lpMint: lpMintPda,
+          userLpToken: userLpToken,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .instruction()
+    );
+
+    try {
+      await provider.sendAndConfirm(tx);
+      assert.fail("Should have failed");
+    } catch (e: any) {
+      // Expected: MissingBurnInstruction (since current_index is 0)
+      assert.include(e.message, "MissingBurnInstruction");
+    }
   });
 });

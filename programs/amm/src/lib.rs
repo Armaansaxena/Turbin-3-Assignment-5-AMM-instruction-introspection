@@ -5,8 +5,6 @@ pub mod state;
 pub mod errors;
 pub mod constants;
 
-// Glob re-export brings Initialize, Deposit, Withdraw, Swap into scope
-// No collision: each instruction file now has a uniquely-named public function
 use instructions::*;
 
 declare_id!("2AixtNQtF9kMe3n4GmUAXnWSqkrfGZyEazexwytCbuw8");
@@ -30,14 +28,20 @@ pub mod amm {
         instructions::deposit::deposit(ctx, amount_a, amount_b, min_lp_tokens)
     }
 
-    /// Burn LP tokens and withdraw proportional share of pool reserves.
-    pub fn withdraw(
-        ctx: Context<Withdraw>,
-        lp_amount: u64,
+    /// Step 1 of withdrawal: Burn LP tokens.
+    /// Must be followed by `payout` in the same transaction.
+    pub fn burn_lp(ctx: Context<BurnLp>, lp_amount: u64) -> Result<()> {
+        instructions::burn_lp::burn_lp(ctx, lp_amount)
+    }
+
+    /// Step 2 of withdrawal: Verify burn and payout proportional share of reserves.
+    /// Uses instruction introspection to verify `burn_lp` occurred in the same TX.
+    pub fn payout(
+        ctx: Context<Payout>,
         min_amount_a: u64,
         min_amount_b: u64,
     ) -> Result<()> {
-        instructions::withdraw::withdraw(ctx, lp_amount, min_amount_a, min_amount_b)
+        instructions::payout::payout(ctx, min_amount_a, min_amount_b)
     }
 
     /// Swap using constant product formula: x * y = k

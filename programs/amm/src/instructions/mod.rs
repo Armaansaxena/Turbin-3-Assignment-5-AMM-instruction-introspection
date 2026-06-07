@@ -1,10 +1,11 @@
 pub mod initialize;
 pub mod deposit;
-pub mod withdraw;
+pub mod burn_lp;
+pub mod payout;
 pub mod swap;
 
-// Glob re-exports are safe now — no `handler` name collision
 pub use initialize::*;
 pub use deposit::*;
-pub use withdraw::*;
+pub use burn_lp::*;
+pub use payout::*;
 pub use swap::*;
