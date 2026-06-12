@@ -62,6 +62,7 @@ pub fn payout(
     min_amount_a: u64,
     min_amount_b: u64,
 ) -> Result<()> {
+    require!(!ctx.accounts.pool.locked, AmmError::PoolLocked);
     // 1. Introspection: Find the BurnLp instruction
     let ixs = ctx.accounts.instructions.as_ref();
     let current_index = load_current_index_checked(ixs).map_err(|_| AmmError::InvalidInstructionIndex)? as usize;

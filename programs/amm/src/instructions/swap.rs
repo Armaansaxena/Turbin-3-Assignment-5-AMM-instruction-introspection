@@ -79,6 +79,7 @@ pub fn swap(
     amount_in: u64,
     minimum_amount_out: u64,
 ) -> Result<()> {
+    require!(!ctx.accounts.pool.locked, AmmError::PoolLocked);
     require!(amount_in > 0, AmmError::ZeroAmount);
 
     let pool = &ctx.accounts.pool;

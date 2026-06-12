@@ -46,6 +46,9 @@ pub struct Pool {
 
     /// Vault B bump seed
     pub vault_b_bump: u8,
+
+    /// Whether the pool is locked (disables deposit/withdraw)
+    pub locked: bool,
 }
 
 impl Pool {
@@ -64,5 +67,6 @@ impl Pool {
         + 1    // bump
         + 1    // lp_mint_bump
         + 1    // vault_a_bump
-        + 1;   // vault_b_bump
+        + 1    // vault_b_bump
+        + 1;   // locked
 }

@@ -77,6 +77,7 @@ pub fn deposit(
     amount_b: u64,
     min_lp_tokens: u64,
 ) -> Result<()> {
+    require!(!ctx.accounts.pool.locked, AmmError::PoolLocked);
     require!(amount_a > 0 && amount_b > 0, AmmError::ZeroAmount);
 
     let pool = &ctx.accounts.pool;

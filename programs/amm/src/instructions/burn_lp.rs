@@ -33,6 +33,7 @@ pub struct BurnLp<'info> {
 }
 
 pub fn burn_lp(ctx: Context<BurnLp>, lp_amount: u64) -> Result<()> {
+    require!(!ctx.accounts.pool.locked, AmmError::PoolLocked);
     require!(lp_amount > 0, AmmError::ZeroAmount);
     
     token::burn(

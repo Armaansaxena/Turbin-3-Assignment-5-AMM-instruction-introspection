@@ -16,10 +16,11 @@ cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [test]
-startup_wait = 20000
+startup_wait = 40000
 
 [test.validator]
 bind_address = "127.0.0.1"
+gossip_port = 8001
 
 [scripts]
-test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+test = "npx ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"

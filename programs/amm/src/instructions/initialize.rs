@@ -100,6 +100,7 @@ pub fn initialize(ctx: Context<Initialize>, fee_bps: u16) -> Result<()> {
     pool.lp_mint_bump = bumps.lp_mint;
     pool.vault_a_bump = bumps.vault_a;
     pool.vault_b_bump = bumps.vault_b;
+    pool.locked       = false;
 
     msg!(
         "Pool initialized | mint_a={} mint_b={} fee_bps={}",

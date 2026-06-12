@@ -295,4 +295,87 @@ describe("amm", () => {
       assert.include(e.message, "MissingBurnInstruction");
     }
   });
+
+  it("Locks the pool and fails to deposit", async () => {
+    // Lock the pool
+    await program.methods
+      .toggleLock(true)
+      .accounts({
+        authority: payer.publicKey,
+        // @ts-ignore
+        pool: poolPda,
+      })
+      .rpc();
+
+    const poolState = await program.account.pool.fetch(poolPda);
+    assert.equal(poolState.locked, true);
+
+    const amountA = new anchor.BN(100_000);
+    const amountB = new anchor.BN(100_000);
+    const minLp = new anchor.BN(1);
+
+    try {
+      await program.methods
+        .deposit(amountA, amountB, minLp)
+        .accounts({
+          user: payer.publicKey,
+          // @ts-ignore
+          pool: poolPda,
+          // @ts-ignore
+          lpMint: lpMintPda,
+          userTokenA: userToken0,
+          userTokenB: userToken1,
+          userLpToken: userLpToken,
+          // @ts-ignore
+          vaultA: vaultAPda,
+          // @ts-ignore
+          vaultB: vaultBPda,
+        })
+        .rpc();
+      assert.fail("Deposit should have failed on locked pool");
+    } catch (e: any) {
+      assert.include(e.message, "PoolLocked");
+    }
+  });
+
+  it("Unlocks the pool and allows deposit", async () => {
+    // Unlock the pool
+    await program.methods
+      .toggleLock(false)
+      .accounts({
+        authority: payer.publicKey,
+        // @ts-ignore
+        pool: poolPda,
+      })
+      .rpc();
+
+    const poolState = await program.account.pool.fetch(poolPda);
+    assert.equal(poolState.locked, false);
+
+    const amountA = new anchor.BN(100_000);
+    const poolStateAfterUnlock = await program.account.pool.fetch(poolPda);
+    const amountB = amountA.mul(poolStateAfterUnlock.reserveB).div(poolStateAfterUnlock.reserveA);
+    const minLp = new anchor.BN(1);
+
+    await program.methods
+      .deposit(amountA, amountB, minLp)
+      .accounts({
+        user: payer.publicKey,
+        // @ts-ignore
+        pool: poolPda,
+        // @ts-ignore
+        lpMint: lpMintPda,
+        userTokenA: userToken0,
+        userTokenB: userToken1,
+        userLpToken: userLpToken,
+        // @ts-ignore
+        vaultA: vaultAPda,
+        // @ts-ignore
+        vaultB: vaultBPda,
+      })
+      .rpc();
+
+    const updatedPoolState = await program.account.pool.fetch(poolPda);
+    assert.isAbove(updatedPoolState.reserveA.toNumber(), poolStateAfterUnlock.reserveA.toNumber());
+  });
 });

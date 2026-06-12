@@ -43,4 +43,7 @@ pub enum AmmError {
 
     #[msg("Unable to load instruction index")]
     InvalidInstructionIndex,
+
+    #[msg("Pool is locked and cannot perform this operation")]
+    PoolLocked,
 }

@@ -52,4 +52,9 @@ pub mod amm {
     ) -> Result<()> {
         instructions::swap::swap(ctx, amount_in, minimum_amount_out)
     }
+
+    /// Toggle pool lock status (authority only)
+    pub fn toggle_lock(ctx: Context<ToggleLock>, locked: bool) -> Result<()> {
+        instructions::toggle_lock::toggle_lock(ctx, locked)
+    }
 }
