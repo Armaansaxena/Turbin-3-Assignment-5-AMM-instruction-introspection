@@ -57,14 +57,20 @@ anchor test
 ```
 
 ## Test Results
-All 6 tests passed successfully, including:
+All 8 tests passed successfully, including:
 - Initializing the pool
 - Depositing liquidity
 - Swapping tokens
 - Withdrawing liquidity via split instructions
+- Pool Lock Guards: Operations fail when locked and succeed when unlocked
 - Failure case: Payout without burn
 - Failure case: Payout with burn in wrong order
 
 ## Screenshot
 
-![Tests Passing](./test-passing1.png)
+![Tests Passing](./test-passing-2.png) Initializing the pool
+- Depositing liquidity
+- Swapping tokens
+- Withdrawing liquidity via split instructions
+- Failure case: Payout without burn
+- Failure case: Payout with burn in wrong order
